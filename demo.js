@@ -6296,7 +6296,7 @@ $__System.register('22', ['21'], function (_export) {
     function touchInput(params) {
         var listeners = [],
             enabled = false,
-            tuioInputHistory = nodesInputHistory();
+            tuioInputHistory = nodesInputHistory(params);
 
         function onInput(event) {
             var allCurrentInput = tuioInputHistory.store(event.touches);
