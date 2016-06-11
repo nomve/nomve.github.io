@@ -20561,9 +20561,7 @@ $__System.register('1', ['40', '42'], function (_export) {
                     drawing = false;
                 }
 
-                gispl.initTuio({
-                    host: 'ws://localhost:8080'
-                });
+                gispl.initTouch();
             });
         }
     };
