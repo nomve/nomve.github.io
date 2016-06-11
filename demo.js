@@ -6323,7 +6323,6 @@ $__System.register('22', ['21'], function (_export) {
 
         // listen to tuio/websocket
         enable();
-        tuioClient.connect();
 
         return {
             listen: function listen(callback) {
