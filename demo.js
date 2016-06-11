@@ -14361,7 +14361,8 @@ $__System.register('40', ['2', '20', '22', '23', '32', '33', '1d', '1f', '3f'], 
                     calibration: calibration }).listen(handleInput);
             };
 
-            gispl.initTouch = function gisplInitTouch(params) {
+            gispl.initTouch = function gisplInitTouch() {
+                var params = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
                 var _params$calibration2 = params.calibration;
                 var calibration = _params$calibration2 === undefined ? defaultCalibration : _params$calibration2;
 
