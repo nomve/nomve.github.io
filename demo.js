@@ -14368,7 +14368,7 @@ $__System.register('40', ['2', '20', '22', '23', '32', '33', '1d', '1f', '3f'], 
 
                 findNode = nodeSearch({ calibration: calibration });
 
-                tuioInput({ findNode: findNode }).listen(handleInput);
+                touchInput({ findNode: findNode }).listen(handleInput);
             };
 
             gispl.filterBitmask = function gisplFilterBitmask() {
