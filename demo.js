@@ -20425,8 +20425,7 @@ $__System.register('1', ['40', '42'], function (_export) {
 
             $(document).ready(function () {
                 var scaling = 'scale-enlarge',
-                    fingerRotation = 'finger-rotation',
-                    stickyMotion = 'any-motion';
+                    fingerRotation = 'finger-rotation';
 
                 gispl.addGesture({
                     name: scaling,
@@ -20438,18 +20437,10 @@ $__System.register('1', ['40', '42'], function (_export) {
                     features: [{ type: 'Rotation' }, { type: 'Count', constraints: [2, 2] }]
                 });
 
-                gispl.addGesture({
-                    name: stickyMotion,
-                    features: [{ type: 'Motion' }, { type: 'Count', constraints: [2, 2] }]
-                });
-
                 var images$ = $('img'),
                     imageRotations = new WeakMap(),
                     imageScales = new WeakMap(),
-                    relativeOriginalTouchPositions = new WeakMap(),
-                    touchPositionInImage = new WeakMap(),
                     currentTranslations = new WeakMap(),
-                    zIndex = 1,
                     drawing = false;
 
                 images$.each(function (index, element) {
@@ -20471,74 +20462,6 @@ $__System.register('1', ['40', '42'], function (_export) {
                     var previousScale = imageScales.get(this);
                     imageScales.set(this, scale * previousScale);
                     requestDraw();
-                });
-
-                gispl(images$).on(stickyMotion, function (event) {
-                    var input = event.input;
-                    var clientX = 0;
-                    var clientY = 0;
-
-                    for (var i = 0; i < input.length; i += 1) {
-                        clientX += input[i].clientX;
-                        clientY += input[i].clientY;
-                    }
-
-                    clientX = Math.floor(clientX / input.length);
-                    clientY = Math.floor(clientY / input.length);
-
-                    var originalPosition = relativeOriginalTouchPositions.get(this);
-
-                    var current = currentTranslations.get(this);
-                    current.translateX = clientX - originalPosition.clientX;
-                    current.translateY = clientY - originalPosition.clientY;
-                    requestDraw();
-                }).on('inputstart', function (event) {
-                    var input = event.input;
-                    var clientX = 0;
-                    var clientY = 0;
-
-                    for (var i = 0; i < input.length; i += 1) {
-                        clientX += input[i].clientX;
-                        clientY += input[i].clientY;
-                    }
-
-                    clientX = Math.floor(clientX / input.length);
-                    clientY = Math.floor(clientY / input.length);
-
-                    // init original position with current values if not set
-                    if (!relativeOriginalTouchPositions.has(this)) {
-                        relativeOriginalTouchPositions.set(this, { clientX: clientX, clientY: clientY });
-                    }
-                    // current position with respect to image
-
-                    var _getBoundingClientRect = this.getBoundingClientRect();
-
-                    var left = _getBoundingClientRect.left;
-                    var top = _getBoundingClientRect.top;
-                    var currentPositionInImage = {
-                        imageX: clientX - left,
-                        imageY: clientY - top
-                    };
-
-                    // init
-                    if (!touchPositionInImage.has(this)) {
-                        touchPositionInImage.set(this, currentPositionInImage);
-                    }
-                    // adjust original position if the position within image on next touch
-                    // is not the same
-                    var previousPositionInImage = touchPositionInImage.get(this);
-                    var inImageOffset = {
-                        x: currentPositionInImage.imageX - previousPositionInImage.imageX,
-                        y: currentPositionInImage.imageY - previousPositionInImage.imageY
-                    };
-
-                    var originalPosition = relativeOriginalTouchPositions.get(this);
-                    originalPosition.clientX += inImageOffset.x;
-                    originalPosition.clientY += inImageOffset.y;
-                    touchPositionInImage.set(this, currentPositionInImage);
-
-                    this.style.zIndex = zIndex;
-                    zIndex += 1;
                 });
 
                 function requestDraw() {
