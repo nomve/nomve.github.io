@@ -6300,7 +6300,7 @@ $__System.register('22', ['21'], function (_export) {
 
         function onInput(event) {
             event.preventDefault();
-            console.log(event);
+            console.log(event.type, event);
 
             var allCurrentInput = tuioInputHistory.store(event.touches);
 
@@ -6311,7 +6311,6 @@ $__System.register('22', ['21'], function (_export) {
             if (!enabled) {
                 document.addEventListener('touchstart', onInput, false);
                 document.addEventListener('touchend', onInput, false);
-                document.addEventListener('touchcancel', onInput, false);
                 document.addEventListener('touchmove', onInput, false);
                 enabled = true;
             }
