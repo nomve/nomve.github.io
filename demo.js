@@ -6309,9 +6309,9 @@ $__System.register('22', ['21'], function (_export) {
 
         function enable() {
             if (!enabled) {
-                // document.addEventListener('touchstart', onInput, false);
-                // document.addEventListener('touchend', onInput, false);
-                // document.addEventListener('touchcancel', onInput, false);
+                document.addEventListener('touchstart', onInput, false);
+                document.addEventListener('touchend', onInput, false);
+                document.addEventListener('touchcancel', onInput, false);
                 document.addEventListener('touchmove', onInput, false);
                 enabled = true;
             }
