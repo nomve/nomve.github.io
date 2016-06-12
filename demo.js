@@ -6299,11 +6299,11 @@ $__System.register('22', ['21'], function (_export) {
             tuioInputHistory = nodesInputHistory(params);
 
         function onInput(event) {
+            event.preventDefault();
+
             var allCurrentInput = tuioInputHistory.store(event.touches);
 
             notify(tuioInputHistory.nodeCurrentInput(), tuioInputHistory.nodeHistoryInput(), allCurrentInput);
-
-            event.preventDefault();
         }
 
         function enable() {
