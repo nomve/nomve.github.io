@@ -6296,22 +6296,101 @@ $__System.register('22', ['21'], function (_export) {
     function touchInput(params) {
         var listeners = [],
             enabled = false,
-            tuioInputHistory = nodesInputHistory(params);
+            currentIndentifier = 0,
+            identifierMapping = new Map(),
+            currentInput = [],
+            touchInputHistory = nodesInputHistory(params);
 
-        function onInput(event) {
-            event.preventDefault();
-            console.log(event.type, event);
+        function inputObjectFromNative(nativeInputObject) {
+            var identifier = currentIndentifier,
+                point = pointInformation(nativeInputObject),
+                path = [point];
 
-            var allCurrentInput = tuioInputHistory.store(event.touches);
+            identifierMapping.set(nativeInputObject.identifier, identifier);
+            currentIndentifier += 1;
 
-            notify(tuioInputHistory.nodeCurrentInput(), tuioInputHistory.nodeHistoryInput(), allCurrentInput);
+            return babelHelpers._extends({
+                identifier: identifier,
+                path: path
+            }, point);
+        }
+
+        function pointInformation(nativeInputObject) {
+            var screenX = nativeInputObject.screenX;
+            var screenY = nativeInputObject.screenY;
+            var clientX = nativeInputObject.clientX;
+            var clientY = nativeInputObject.clientY;
+            var pageX = nativeInputObject.pageX;
+            var pageY = nativeInputObject.pageY;
+
+            return {
+                screenX: screenX, screenY: screenY,
+                clientX: clientX, clientY: clientY,
+                pageX: pageX, pageY: pageY
+            };
+        }
+
+        function nativeObjectUpdate(inputObject, nativeInputObject) {
+            // update path
+            var lastPoint = pointInformation(nativeInputObject);
+            inputObject.path[inputObject.path.length] = lastPoint;
+            // update point information (screenX, clientX...)
+            // but keep the original identifier
+            Object.assign(inputObject, lastPoint);
+        }
+
+        function onStart(event) {
+            for (var i = 0; i < event.changedTouches.length; i += 1) {
+                var inputObject = inputObjectFromNative(event.changedTouches[i]);
+                currentInput[currentInput.length] = inputObject;
+            }
+            onInputChange();
+        }
+
+        function onEnd(event) {
+            for (var i = 0; i < event.changedTouches.length; i += 1) {
+                var nativeIdentifier = event.changedTouches[i].identifier,
+                    gisplIdentifier = identifierMapping.get(nativeIdentifier);
+
+                for (var j = 0; j < currentInput.length; j += 1) {
+                    if (currentInput[j].identifier === gisplIdentifier) {
+                        currentInput.splice(j, 1);
+                        identifierMapping['delete'](nativeIdentifier);
+                        break;
+                    }
+                }
+            }
+            onInputChange();
+        }
+
+        function onMove(event) {
+            for (var i = 0; i < event.changedTouches.length; i += 1) {
+                var nativeInputObject = event.changedTouches[i],
+                    nativeIdentifier = nativeInputObject.identifier,
+                    gisplIdentifier = identifierMapping.get(nativeIdentifier);
+
+                for (var j = 0; j < currentInput.length; j += 1) {
+                    var inputObject = currentInput[j];
+                    if (inputObject.identifier === gisplIdentifier) {
+                        nativeObjectUpdate(inputObject, nativeInputObject);
+                        break;
+                    }
+                }
+            }
+            onInputChange();
+        }
+
+        function onInputChange() {
+            touchInputHistory.store(currentInput);
+
+            notify(touchInputHistory.nodeCurrentInput(), touchInputHistory.nodeHistoryInput(), currentInput);
         }
 
         function enable() {
             if (!enabled) {
-                document.addEventListener('touchstart', onInput, false);
-                document.addEventListener('touchend', onInput, false);
-                document.addEventListener('touchmove', onInput, false);
+                document.addEventListener('touchstart', onStart, false);
+                document.addEventListener('touchend', onEnd, false);
+                document.addEventListener('touchmove', onMove, false);
                 enabled = true;
             }
         }
@@ -6350,10 +6429,10 @@ $__System.register('22', ['21'], function (_export) {
             // this removes the listener from tuioclient
             disable: function disable() {
                 if (enabled) {
-                    document.removeEventListener('touchstart', onInput, false);
-                    document.removeEventListener('touchend', onInput, false);
-                    document.removeEventListener('touchcancel', onInput, false);
-                    document.removeEventListener('touchmove', onInput, false);
+                    document.removeEventListener('touchstart', onInputChange, false);
+                    document.removeEventListener('touchend', onInputChange, false);
+                    document.removeEventListener('touchcancel', onInputChange, false);
+                    document.removeEventListener('touchmove', onInputChange, false);
                     enabled = false;
                 }
             }
@@ -6364,11 +6443,7 @@ $__System.register('22', ['21'], function (_export) {
         var params = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
         // limit for all stored objects
-        var _params$limit = params.limit;
-        var limit = _params$limit === undefined ? 10 : _params$limit;
         var findNode = params.findNode;
-        // list of stored inputObject instances used by all nodes
-        var storedObjects = [];
         // a map of node => [inputObjects]
         // all inputObjects that were in contact with the node at one point
         var nodesWithInputHistory = new WeakMap();
@@ -6376,55 +6451,6 @@ $__System.register('22', ['21'], function (_export) {
         var nodesWithInput = new Map();
         var allCurrentInput = [];
 
-        // find matching inputObject for a tuioComponent
-        // matches per id
-        function findIndexOf(nativeInputObject) {
-            var indexOfComponent = -1;
-            for (var index = 0; index < storedObjects.length; index += 1) {
-                var object = storedObjects[index];
-                if (object.identifier === nativeInputObject.identifier) {
-                    indexOfComponent = index;
-                    break;
-                }
-            }
-            return indexOfComponent;
-        }
-        // removes an inputObject from node => [inputObjects]
-        // if the instance does not exist in storedObjects
-        // this is done because once the limit for storedObjects is reached
-        // it will remove the first element from the list
-        // but it is still in the list for an individual node history
-        function removeDroppedInputObjectsFrom(historyForNode) {
-            for (var historyIndex = 0; historyIndex < historyForNode.length; historyIndex += 1) {
-                var historyInputObject = historyForNode[historyIndex],
-                    notStored = storedObjects.indexOf(historyInputObject) === -1;
-                if (notStored) {
-                    historyForNode.splice(historyIndex, 1);
-                }
-            }
-        }
-        // takes a tuioComponent and either
-        // finds and updates a matching inputObject
-        // or creates a new inputObject
-        // this is based on sessionId
-        function convertToInputObject(nativeInputObject) {
-            var indexOfComponent = findIndexOf(nativeInputObject),
-                newComponent = indexOfComponent === -1,
-                inputObject = undefined;
-
-            if (newComponent) {
-                var storeLimitReached = storedObjects.length === limit;
-                inputObject = inputObjectFromNative(nativeInputObject);
-                if (storeLimitReached) {
-                    storedObjects.shift();
-                }
-                storedObjects[storedObjects.length] = inputObject;
-            } else {
-                inputObject = storedObjects[indexOfComponent];
-                nativeObjectUpdate(inputObject, nativeInputObject);
-            }
-            return inputObject;
-        }
         //
         function toNodeInputCurrent(node, inputObject) {
             if (!nodesWithInput.has(node)) {
@@ -6441,7 +6467,6 @@ $__System.register('22', ['21'], function (_export) {
             var historyForNode = nodesWithInputHistory.get(node),
                 inputObjectNotInHistory = historyForNode.indexOf(inputObject) === -1;
             if (inputObjectNotInHistory) {
-                removeDroppedInputObjectsFrom(historyForNode);
                 historyForNode[historyForNode.length] = inputObject;
             }
         }
@@ -6454,56 +6479,19 @@ $__System.register('22', ['21'], function (_export) {
                 return nodesWithInput;
             },
             // returns an array of in browser inputObjects that correspond to tuioComponents
-            store: function store(nativeInputObjects) {
+            store: function store(inputObjects) {
                 nodesWithInput.clear();
                 allCurrentInput.length = 0;
-                for (var i = 0; i < nativeInputObjects.length; i += 1) {
-                    var foundNode = findNode.fromPoint(nativeInputObjects[i]);
+                for (var i = 0; i < inputObjects.length; i += 1) {
+                    var inputObject = inputObjects[i],
+                        foundNode = findNode.fromPoint(inputObject);
                     if (foundNode) {
-                        var inputObject = convertToInputObject(nativeInputObjects[i]);
                         toNodeInputCurrent(foundNode, inputObject);
                         toNodeInputHistory(foundNode, inputObject);
-                        allCurrentInput[allCurrentInput.length] = inputObject;
                     }
                 }
-                return allCurrentInput;
             }
         };
-    }
-
-    function pointInformation(nativeInputObject) {
-        var screenX = nativeInputObject.screenX;
-        var screenY = nativeInputObject.screenY;
-        var clientX = nativeInputObject.clientX;
-        var clientY = nativeInputObject.clientY;
-        var pageX = nativeInputObject.pageX;
-        var pageY = nativeInputObject.pageY;
-
-        return {
-            screenX: screenX, screenY: screenY,
-            clientX: clientX, clientY: clientY,
-            pageX: pageX, pageY: pageY
-        };
-    }
-
-    function inputObjectFromNative(nativeInputObject) {
-        var identifier = nativeInputObject.identifier;
-        var point = pointInformation(nativeInputObject);
-        var path = [point];
-
-        return babelHelpers._extends({
-            identifier: identifier,
-            path: path
-        }, point);
-    }
-
-    function nativeObjectUpdate(inputObject, nativeInputObject) {
-        // update path
-        var lastPoint = pointInformation(nativeInputObject);
-        inputObject.path[inputObject.path.length] = lastPoint;
-        // update point information (screenX, clientX...)
-        // but keep the original identifier
-        Object.assign(inputObject, lastPoint);
     }
     return {
         setters: [function (_) {
