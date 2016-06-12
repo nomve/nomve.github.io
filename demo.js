@@ -8111,10 +8111,10 @@ $__System.register('32', [], function (_export) {
             return mouseEvent.screenX - mouseEvent.clientX;
         }
 
-        function captureEvent(event) {
+        function captureMouseEvent(event) {
             if (listenForInputEvent) {
 
-                calibrationMouseEvent(event);
+                calibrationEvent(event);
                 listenForInputEvent = false;
 
                 setTimeout(function pauseBeforeAllowingRecalibration() {
@@ -8123,7 +8123,19 @@ $__System.register('32', [], function (_export) {
             }
         }
 
-        function calibrationMouseEvent() {
+        function captureTouchEvent(event) {
+            if (listenForInputEvent) {
+
+                calibrationEvent(event.touches[0]);
+                listenForInputEvent = false;
+
+                setTimeout(function pauseBeforeAllowingRecalibration() {
+                    listenForInputEvent = true;
+                }, inputEventPause);
+            }
+        }
+
+        function calibrationEvent() {
             var event = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
             if (typeof event.clientX === 'undefined' || typeof event.clientY === 'undefined' || typeof event.screenX === 'undefined' || typeof event.screenY === 'undefined') {
@@ -8136,12 +8148,13 @@ $__System.register('32', [], function (_export) {
 
         // called before the object is returned
         if (typeof mouseEvent !== 'undefined') {
-            calibrationMouseEvent(mouseEvent);
+            calibrationEvent(mouseEvent);
         }
-        document.addEventListener('mouseover', captureEvent);
+        document.addEventListener('mouseover', captureMouseEvent);
+        document.addEventListener('touchstart', captureTouchEvent);
 
         instance = {
-            mouseEvent: calibrationMouseEvent,
+            mouseEvent: calibrationEvent,
 
             viewportPosition: function viewportPosition() {
                 var top = viewportPositionTop(),
