@@ -6300,7 +6300,7 @@ $__System.register('22', ['21'], function (_export) {
 
         function onInput(event) {
             event.preventDefault();
-            console.log(e);
+            console.log(event);
 
             var allCurrentInput = tuioInputHistory.store(event.touches);
 
